@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#101827" />
+<title>FEED FRENZY — Knowledge vs Engagement</title>
+<style>
+  *{box-sizing:border-box} 
+  body{margin:0;min-height:100vh;display:grid;place-items:center;padding:18px;background:radial-gradient(circle at 20% 10%,#263b59 0,#101827 48%,#090e18 100%);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;color:#f4f7fb}
+  .wrap{width:min(100%,560px)}
+  .top{text-align:center;margin-bottom:16px}.eyebrow{font-size:11px;letter-spacing:3px;color:#8da6c5;font-weight:800}.top h1{font-size:clamp(34px,8vw,48px);line-height:1;margin:9px 0 8px;letter-spacing:-2px}.top h1 span{color:#6ee7b7}.top p{margin:0;color:#aebbd0;font-size:14px}
+  .panel{background:#121e30;border:1px solid #30435e;border-radius:22px;padding:16px;box-shadow:0 24px 70px #0008}
+  .stats{display:flex;justify-content:space-between;gap:10px;margin-bottom:12px}.stat{flex:1;background:#1a2a40;border:1px solid #2c405c;border-radius:12px;padding:9px 12px}.stat small{display:block;color:#91a5c0;font-size:10px;letter-spacing:1.5px;font-weight:800}.stat strong{font-size:22px;font-variant-numeric:tabular-nums}
+  #game{position:relative;height:360px;overflow:hidden;border-radius:15px;border:1px solid #344b68;background:linear-gradient(180deg,#172a43,#101a2b);touch-action:pan-y}
+  .lane{position:absolute;inset:0;background:repeating-linear-gradient(180deg,transparent 0 44px,#ffffff08 45px 46px)}
+  .player{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);width:62px;height:62px;border-radius:18px;background:#173f3a;border:2px solid #6ee7b7;display:grid;place-items:center;font-size:34px;box-shadow:0 0 24px #6ee7b733;z-index:3;user-select:none}
+  .item{position:absolute;top:-60px;min-width:130px;max-width:170px;padding:9px 12px;border-radius:12px;font-size:12px;font-weight:800;text-align:center;box-shadow:0 8px 20px #0005;z-index:2;user-select:none}.good{background:#d1fae5;color:#065f46;border:1px solid #6ee7b7}.bad{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+  .overlay{position:absolute;inset:0;background:#0a1422dc;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px;z-index:5}.overlay h2{font-size:27px;margin:0 0 8px}.overlay p{max-width:340px;color:#c1cee0;line-height:1.5;margin:0 0 18px;font-size:14px}
+  button{border:0;border-radius:12px;background:#6ee7b7;color:#08251e;font-weight:900;font-size:14px;padding:12px 20px;cursor:pointer}button:active{transform:scale(.97)}
+  .controls{display:flex;justify-content:center;gap:12px;margin-top:12px}.move{width:88px;background:#243750;color:#e8f1fc;border:1px solid #405775;font-size:22px;padding:9px}
+  .hint{text-align:center;color:#8fa4bf;font-size:11px;margin:12px 0 0}.legend{display:flex;justify-content:center;gap:18px;flex-wrap:wrap;margin-top:12px;color:#b6c5d9;font-size:12px}.legend b{color:#6ee7b7}.legend .avoid{color:#fca5a5}
+  @media(max-width:420px){#game{height:340px}.item{min-width:112px;font-size:11px}.stat strong{font-size:19px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="top"><div class="eyebrow">A TINY EXPERIMENT IN YOUR LINKEDIN FEED</div><h1>FEED <span>FRENZY</span></h1><p>Catch useful ideas. Dodge empty engagement. Your feed, your rules.</p></header>
+  <section class="panel">
+    <div class="stats"><div class="stat"><small>SCORE</small><strong id="score">0</strong></div><div class="stat"><small>TIME LEFT</small><strong id="time">30</strong></div><div class="stat"><small>BEST</small><strong id="best">0</strong></div></div>
+    <div id="game" aria-label="Game area">
+      <div class="lane"></div><div id="player" class="player">🧠</div>
+      <div id="overlay" class="overlay"><h2>Ready to clean your feed?</h2><p>Collect <b>knowledge posts</b> for +10 points. Dodge <b>engagement bait</b> or lose 5 points. You have 30 seconds!</p><button id="start">START GAME</button></div>
+    </div>
+    <div class="controls"><button class="move" id="left" aria-label="Move left">←</button><button class="move" id="right" aria-label="Move right">→</button></div>
+    <div class="legend"><span><b>＋10</b> Useful ideas</span><span class="avoid">−5 Engagement bait</span></div>
+    <p class="hint">Use ← → arrow keys, A / D, or the buttons. Works on mobile too.</p>
+  </section>
+</main>
+<script>
+(()=>{
+ const game=document.getElementById('game'), player=document.getElementById('player'), overlay=document.getElementById('overlay');
+ const scoreEl=document.getElementById('score'),timeEl=document.getElementById('time'),bestEl=document.getElementById('best');
+ let score=0,time=30,x=0,items=[],running=false,last=0,spawn=0,raf=0,timer=0;
+ const goodTexts=['Linux Kernel tip','C pointer insight','DDR deep dive','Debugging lesson','Useful AI research','Memory management'];
+ const badTexts=['LIKE FOR LIKE!','Agree? Comment YES','Viral hot take','Tag 10 friends','Engagement bait'];
+ let best=0;try{best=Number(localStorage.getItem('feedFrenzyBest')||0)}catch(e){} bestEl.textContent=best;
+ function setPlayer(){player.style.left=x+'%'}
+ function move(dir){if(!running)return;x=Math.max(9,Math.min(91,x+dir*9));setPlayer()}
+ function clearItems(){items.forEach(i=>i.el.remove());items=[]}
+ function updateScore(n){score=Math.max(0,score+n);scoreEl.textContent=score}
+ function spawnItem(){const good=Math.random()<.62;const el=document.createElement('div');el.className='item '+(good?'good':'bad');el.textContent=(good?goodTexts:badTexts)[Math.floor(Math.random()*(good?goodTexts.length:badTexts.length))];const pos=8+Math.random()*72;el.style.left=pos+'%';game.appendChild(el);items.push({el,y:-58,x:pos,good,speed:2.0+Math.random()*1.2})}
+ function finish(){running=false;cancelAnimationFrame(raf);clearInterval(timer);try{if(score>best){best=score;localStorage.setItem('feedFrenzyBest',String(best))}}catch(e){}bestEl.textContent=best;overlay.innerHTML=`<h2>Feed audited. 🎯</h2><p>You scored <b>${score}</b> points. ${score>=100?'Your feed has serious signal.':'Keep choosing signal over noise.'}<br>Best score: <b>${best}</b></p><button id="again">PLAY AGAIN</button>`;overlay.style.display='flex';document.getElementById('again').addEventListener('click',start)}
+ function frame(ts){if(!running)return;const dt=Math.min(32,ts-last||16);last=ts;spawn+=dt;if(spawn>720){spawn=0;spawnItem()}const pr=player.getBoundingClientRect(),gr=game.getBoundingClientRect();items=items.filter(it=>{it.y+=it.speed*dt/16;it.el.style.top=it.y+'px';const r=it.el.getBoundingClientRect();const hit=r.bottom>=pr.top+8&&r.top<=pr.bottom&&r.right>=pr.left+5&&r.left<=pr.right-5;if(hit){updateScore(it.good?10:-5);it.el.remove();return false}if(it.y>gr.height+10){it.el.remove();return false}return true});raf=requestAnimationFrame(frame)}
+ function start(){cancelAnimationFrame(raf);clearInterval(timer);clearItems();score=0;time=30;x=50;spawn=0;last=0;scoreEl.textContent='0';timeEl.textContent='30';setPlayer();overlay.style.display='none';running=true;timer=setInterval(()=>{time--;timeEl.textContent=time;if(time<=0)finish()},1000);raf=requestAnimationFrame(frame)}
+ document.getElementById('start').addEventListener('click',start);document.getElementById('left').addEventListener('click',()=>move(-1));document.getElementById('right').addEventListener('click',()=>move(1));
+ document.addEventListener('keydown',e=>{if(['ArrowLeft','a','A'].includes(e.key)){e.preventDefault();move(-1)}if(['ArrowRight','d','D'].includes(e.key)){e.preventDefault();move(1)}if((e.key==='Enter'||e.key===' ')&&!running&&document.getElementById('start')){e.preventDefault();start()}});
+})();
+</script>
+</body>
+</html>
